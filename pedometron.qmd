@@ -1,5 +1,5 @@
 ---
-title: "INLABru : Convenient digital soil mapping model fitting using INLA-SPDE"
+title: "inlabru : Convenient fitting of Bayesian digital soil mapping models using INLA-SPDE"
 author:
  - name: Nicolas Saby
    affiliations:
@@ -9,9 +9,9 @@ author:
       - ref: biosp
 affiliations:
  - id: info
-   name: INRAe, InfoEtSols, Orléans, France
+   name: INRAE, InfoEtSols, Orléans, France
  - id: biosp
-   name: INRAe, BioSP, Orléans, France
+   name: INRAE, BioSP, Orléans, France
 date: "4/24/2023"
 bibliography: reference.bib
 editor: visual
@@ -44,13 +44,13 @@ execute:
 
 # Introduction
 
-Pedometricians are nowadays big fans of machine learning (ML) approaches with on the top the widely used random forest algorithm, see for example [@poggio_soilgrids_2021]. These algorithms are indeed particularly adapted to the management of large data sets to map soil properties on wide extent in a large range of situations. The techniques are based on classification and regression, but they take no account of spatial correlations [@HEUVELINK2022100639]. This trend also seems to be accompanied by a lesser use of geostatistical techniques that maybe require more computer resource and statistical skills. However, if prediction is performed in several steps (*eg* regression or any other machine learning prediction in step 1, followed by spatial kriging of the residuals in step 2), then an accurate assessment of the prediction uncertainties is difficult since uncertainties from the first step must be propagated through to the second step.
+Pedometricians are nowadays heavy users of Machine Learning (ML) approaches with on the top the widely used random forest algorithm, see for example [@poggio_soilgrids_2021]. These algorithms are indeed particularly well adapted to the management of large data sets to map soil properties on large geographic areas in a wide range of situations. The techniques are based on classification and regression algorithms, but they take no account of spatial correlations in residuals [@HEUVELINK2022100639]. This trend towards heavy use of ML tools also seems to be accompanied by a diminished use of geostatistical techniques that often require more computer resources but also profound statistical skills to construct and fine-tune models. Often, prediction is performed in several steps (*eg* regression or any other machine learning prediction in step 1, followed by spatial kriging of the residuals in step 2), but then an accurate assessment of the prediction uncertainties is difficult since uncertainties from the first step must be propagated through to the second step.
 
-In this paper, we propose to solve these issues by using the fully Bayesian estimation framework based on the integrated nested Laplace approximation (INLA,[@Rue2009]), combined with the so-called stochastic partial differential equation approach [SPDE, @Lindgren2011] providing numerically convenient representations of Gaussian processes over continuous space. The INLA method is an alternative to traditional Markov chain Monte Carlo methods for Bayesian estimation and provides off-the-shelf implementation of fast and accurate deterministic approximations of posterior inferences for a large class of models. INLA with SPDE is handle to handle very large data sets.
+In this paper, we propose to solve these issues by using the fully Bayesian estimation framework based on the integrated nested Laplace approximation (INLA,[@Rue2009]), combined with the so-called stochastic partial differential equation approach [SPDE, @Lindgren2011] providing numerically convenient representations of Gaussian processes over continuous space. Over the last decade, the INLA method has become the main tool for estimating a wide variety of Generalized Additive Mixed Models (i.e., Generalized Additive Models with random effects) in a Bayesia setting and is a relatively easy-to-use alternative to traditional Markov chain Monte Carlo methods. It provides off-the-shelf implementation of fast and accurate deterministic approximations of posterior inferences for a large class of models. INLA with SPDE is a powerful combination to handle very large spatial data sets.
 
-INLA-SPDE was already introduced by [@Poggio2016] or [@Huang2017] in the pedometrics community. However, the use of this approach was probably hindered by the complexity of the INLA R package. Recently, the `INLABru` R package [@yuan2017point] originally developed for the point process models has integrates a range of functions to help in implementing INLA-SPDE models in a convenient way. We propose here to show you using a simple and classical regression kriging approach as an example.
+INLA-SPDE was already introduced by [@Poggio2016] or [@Huang2017] to the pedometrics community. However, wider use of this approach by the community was probably hindered by the complexity of the INLA R package. Recently, the `inlabru` R package [@yuan2017point], originally developed with a strong focus on point process models for discrete data in ecology, has integrated a range of functions to help in implementing INLA-SPDE models in a more convenient way through a more ergonomic interface. We propose here to illustrate how this package works by using a simple and classical regression kriging approach as an example.
 
-When the number of data is huge, it is important to mention that one can improve the performance by using the PARDISO solver. Please, go to https://www.pardiso-project.org/r-inla/#license to apply for a license. Also, use inla.pardiso() for instructions on how to enable the PARDISO sparse library.
+When the number of observations is huge, it is important to mention that one can improve the performance of the high-dimensional matrix computations conducted in INLA by using the PARDISO solver library. To activate it (for free for non commercial uses), go to https://www.pardiso-project.org/r-inla/#license to obtain a license, which will take you at most several minutes. Also, type  inla.pardiso() at the R command line for viewing the (very simple) instructions on how to enable the PARDISO sparse library.
 
 # Set up
 
