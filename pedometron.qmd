@@ -113,7 +113,7 @@ We construct a hierarchical model in the framework of the SCORPAN approach for t
 $$
 \eta(s) \sim {\text{Intercept}} + \underbrace{ \sum_{i\in \text{scorpan}}\beta^{\text{sc}}_i z^{\text{sc}}_i(s)}_{\text{SCORPAN factors} } +\underbrace{W(s)}_{\text{Spatial Gaussian field}}
 $$ 
-The spatial field $W(s)$ captures autocorrelation not explained by the SCORPAN factors. The latent process $\eta(s)$ will then be used in the observation-likelihood, which is here chosen as gaussian. We use the `|` notation to indicate conditioning of the property at the left side of `|` o the parameters given to the right side of `|`. This leads to the following hierarchical formulation for the observations, 
+The spatial field $W(s)$ captures autocorrelation not explained by the SCORPAN factors. The latent process $\eta(s)$ will then be used in the observation-likelihood, which is here chosen as gaussian. We use the `|` notation to indicate conditioning of the property at the left side of `|` on the parameters given to the right side of `|`. This leads to the following hierarchical formulation for the observations, 
 
 $$
 z(s) | (\eta(s),\theta) \sim \mathcal{N}(\eta(s_i), \sigma^2),
@@ -189,13 +189,12 @@ For handling the uncertainty stemming from the prior distributions of hyperparam
 ```{r}
 fit <- inlabru:: bru(components = cmp,
            data = meuse,
-           family = "gaussian",
+           family = "gamma",
            domain = list(coordinates = mesh),
            options = list(
              control.inla = list(int.strategy = "eb"),
              verbose = FALSE)
            )
-
 ```
 
 The summary of the fitted model gives the posterior estimates of fixed effects (intercept and elevation) and hyperparameters (standard deviation and range of the Gaussian random field).
@@ -215,17 +214,17 @@ pred <- predict(
   fit,
   n.samples = 100,
   meuse.grid,
-  ~ field + Intercept + dist ,
+  ~ exp(field + Intercept + dist),
   num.threads = 2
 )
 ```
 
-Internally, the `predict` function draws sapmles from the posterior distribution and then combines them to provide the requested predictions. It is also very simple to perform the sampling step directly to obtain the posterior samples using the `generate` function. For illustration, we here we draw 5 samples and select the first one.
+Internally, the `predict` function draws samples from the posterior distribution and then combines them to provide the requested predictions. It is also very simple to perform the sampling step directly to obtain the posterior samples using the `generate` function. For illustration, we here we draw 5 samples and select the first one.
 
 ```{r}
 samp <- generate(fit, 
                  meuse.grid,
-                 ~ field + Intercept + dist ,
+                 ~ exp(field + Intercept + dist),
                  n.samples = 5
 )
 
@@ -252,8 +251,7 @@ plot(fit, "dist")
 We can plot the median, lower 95% and upper 95% density surfaces as follows (assuming that the predicted intensity is in object `pred`).
 
 ```{r}
-pred$q0.025[pred$q0.025<0] = 0 
-
+#pred$q0.025[pred$q0.025<0] = 0 
 tm_shape(pred) +
   tm_raster(
     c("q0.025","median","q0.975")
