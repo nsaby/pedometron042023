@@ -207,7 +207,7 @@ summary(fit)
 
 # Spatial predictions
 
-Now we use the fit to predict the field on a lattice, and therefore generate a set of results using 100 realizations from the posterior distribution of the model. The approach of using posterior simulation for prediction allows us to appropriately represent the uncertainties in the predictions, and we can choose very flexibly for which parameters and properties we would like to provide predictions. 
+Now we use the fit to predict the field on a lattice, and therefore generate a set of results using 100 realizations from the posterior distribution of the model. The approach of using posterior simulation for prediction allows us to appropriately represent the uncertainties in the predictions, and we can choose very flexibly for which parameters and properties we would like to provide predictions. In the predictor formula, we use the `exp` function to take into account the log-link between the mean of the gamma distribution of the `om` variable and our linear predictor.
 
 ```{r}
 pred <- predict(
