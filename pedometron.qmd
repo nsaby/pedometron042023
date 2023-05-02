@@ -1,17 +1,21 @@
 ---
 title: "inlabru : Convenient fitting of Bayesian digital soil mapping models using INLA-SPDE"
-author:
- - name: Nicolas Saby
-   affiliations:
-      - ref: info
- - name: Thomas Opitz
-   affiliations:
-      - ref: biosp
+authors:
+  - name: Nicolas Saby
+    affiliations:
+      - ref: uf
+    corresponding: true
+  - name: Thomas Opitz
+    affiliations:
+      - ref: eu
 affiliations:
- - id: info
-   name: INRAE, InfoEtSols, Orléans, France
- - id: biosp
-   name: INRAE, BioSP, Orléans, France
+  - id: uf
+    name: INRAe, Info&Sols, Orléans, France
+  - id: eu
+    name: INRAe, BioSP, Avignon, France
+
+filters:
+  - authors-block
 date: "4/24/2023"
 bibliography: reference.bib
 editor: visual
@@ -31,13 +35,6 @@ format:
     keep-tex: true
     template-partials: 
       - title.tex
-    include-in-header:
-      text: |
-        \usepackage[noblocks]{authblk}
-        \renewcommand*{\Authsep}{, }
-        \renewcommand*{\Authand}{, }
-        \renewcommand*{\Authands}{, }
-        \renewcommand\Affilfont{\small}
 execute:
   warning: false
 ---
@@ -104,9 +101,9 @@ gridded(meuse.grid) = TRUE
 
 # Fully Bayesian DSM approach
 
-## The hierarchical model
+## The hierarchical DSM model
 
-We construct a hierarchical modelfor the soil property $z(s)$ of a spatial location $s$ in the framework of the prediction in the presence of exhaustive ancillary information. In this paper, $z$ will correspond to the organic matter, `om`. We will assume the following linkage between model components and observations, where we denote the latent process by $\eta(s)$.
+We construct a hierarchical model for the soil property $z(s)$ of a spatial location $s$ in the framework of the prediction in the presence of exhaustive ancillary information. We will assume the following linkage between model components and observations, where we denote the latent process by $\eta(s)$.
 
 $$
 \eta(s) \sim {\text{Intercept}} + \underbrace{ \sum_{i\in \text{scorpan}}\beta_i z_i(s)}_{\text{Covariates} } +\underbrace{W(s)}_{\text{Spatial Gaussian field}}
@@ -115,6 +112,8 @@ $$ The spatial field $W(s)$ captures autocorrelation not explained by the covari
 $$
 z(s) | (\eta(s),\theta) \sim \mathcal{N}(\eta(s_i), \sigma^2),
 $$ where different observations $z(s)$ are conditionally independent given the latent process $\eta(s)$ and the hyperparameters in $\theta$ controlling it. This means that we include a `nugget effect` or `measurement error` with variance $\sigma^2$ in the model.
+
+In this paper, $z$ will correspond to the organic matter, `om`. 
 
 ## Construction of the mesh for the SPDE model
 
@@ -166,7 +165,7 @@ matern <-
 
 ## Specify the hierarchical model
 
-We then specify the model components in the `cmp` object using the convenient `inlabru` approach. We use as example the following latent effects: an intercept, a linear relationship with the covariate corresponding to the distance to the river, and the Gaussian random field.
+We then specify the model components in the `cmp` object using the convenient `inlabru` approach. We use as example the following latent effects: an intercept, a linear relationship with the covariate as fixed effect corresponding to the distance to the river, and the Gaussian random field as random effect.
 
 ```{r}
 cmp <- om ~ 
@@ -234,20 +233,36 @@ pred$sample <- samp[, 1]
 
 ## The different effects
 
-We can plot the posterior densities for the latent effect Intercept and distance to the border.
+We can plot the posterior densities for the latent effect `Intercept` and `distance` to the border.
 
 To this end we will use the `inlabru::plot()` function,
 
 ```{r}
-plot(fit, "Intercept")
-plot(fit, "dist")
+p1 <- plot(fit, "Intercept")
+p2 <- plot(fit, "dist")
+multiplot(p1, p2)
+
 ```
 
-## The spatial prediction maps with uncertainty
+As the credibility interval does not contains 0, we can conclude to a significant effect of the fixed effect.
+
+We can also plot the posterior distribution of the parameters of the gaussiant field: range and variance
+```{r}
+spde.range.W0 <- spde.posterior(fit, "field", what = "range")
+spde.logvar.W0 <- spde.posterior(fit, "field", what = "variance")
+range.plot.W0 <- plot(spde.range.W0)
+var.plot.W0 <- plot(spde.logvar.W0)
+multiplot(range.plot.W0, var.plot.W0)
+
+```
+
+
+## The spatial predictions with uncertainty
 
 We can plot the median, lower 95% and upper 95% density surfaces as follows (assuming that the predicted intensity is in object `pred`).
 
 ```{r}
+# correction of negative predictions
 pred$q0.025[pred$q0.025<0] = 0 
 
 tm_shape(pred) +
@@ -264,9 +279,13 @@ The sample from the posterior distribution can be mapped as follows.
 tm_shape(pred) + tm_raster("sample")
 ```
 
-## The spatial effect
+## The maps of the random  and the fixed effects
 
-Next, we plot the spatial Gaussian random field $W(s)$.
+Next, we plot the 2 effects of the model:
+
+-   the spatial Gaussian random field $W(s)$,
+
+-   the fixed effect.
 
 ```{r}
 
@@ -278,17 +297,31 @@ pred <- predict(
   num.threads = 2
 )
 
-tm_shape(pred) + tm_raster("median")
+fixed <- predict(
+  fit,
+  n.samples = 100,
+  meuse.grid,
+  ~  Intercept + dist  ,
+  num.threads = 2
+)
+
+pred$FixedEffect <- fixed$median
+pred$W <- pred$median
+
+tm_shape(pred) +
+  tm_raster(c("W","FixedEffect"))
 
 ```
 
 # Final remarks
 
-The goal of [inlabru](http://inlabru.org/) is to facilitate spatial modeling using integrated nested Laplace approximation via the [R-INLA package](https://www.r-inla.org/). The recent developments allow now to construct in a convenient way bayesian spatial model (INLA-SPDE) of soil properties and their uncertainty. Model components are specified with general inputs and mapping methods to the latent variables, and the predictors are specified via general R expressions.
+The goal of [inlabru](http://inlabru.org/) is to facilitate spatial modeling using integrated nested Laplace approximation via the [R-INLA package](https://www.r-inla.org/). The recent developments allow now to construct in a convenient way Bayesian spatial model (INLA-SPDE) of soil properties and their uncertainty. Model components are specified with general inputs and mapping methods to the latent variables, and the predictors are specified via general R expressions.
 
-When the number of observations is huge, it is important to mention that one can improve the performance of the high-dimensional matrix computations conducted in INLA by using the PARDISO solver library. It is already full included in the standard INLA installation but has to be activated through a licence key. To activate it (free for non commercial uses), go to https://www.pardiso-project.org/r-inla/#license to obtain the license, which will take you at most several minutes. Also, you can type inla.pardiso() at the R command line for viewing the (very simple) instructions on how to enable the PARDISO sparse library.
+When the number of observations is huge, it is important to mention that one can improve the performance of the high-dimensional matrix computations conducted in INLA by using the PARDISO solver library. It is already full included in the standard INLA installation but has to be activated through a licence key. To activate it (free for non commercial uses), go to https://www.pardiso-project.org/r-inla/#license to obtain the license, which will take you at most several minutes. Also, you can type inla.pardiso() at the R command line for viewing the (very simple) instructions on how to enable the PARDISO sparse library. Moreover, new developments are underway for especially data-rich model to achieve even faster inference, improved numerical stability and scalability [@VANNIEKERK2023107692]
 
-We
+One need to indicate the likelihood family such as `gaussian`, `poisson` or `binomial`. By default family is `gaussian`. A list of possible alternatives can be seen by typing `names(inla.models()$likelihood)`. It is therefore possible to fit a wide range of model allowing to approach a great diversity of problems in soil science. It is for example possible to fit use the `gamma` family in this example to cope with heavy tail.
+
+Heuvelink and Webster [-@HEUVELINK2022100639]  listed a set of challenges for pedometricians and spatial statisticians  to strengthen the role of spatial statistics. Without being able to solve all of them, it seems to us that `INLA` by providing a fully Bayesian modelling in a rapid and convinent way can provide some answers to some of them, e.g., the better uncertainty quantification, the change of support, incorporating attribute and positional measurement uncertainty. 
 
 # Code availability
 
