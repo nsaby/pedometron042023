@@ -43,9 +43,11 @@ execute:
 
 Pedometricians are nowadays heavy users of Machine Learning (ML) approaches with on the top the widely used random forest algorithm, see for example [@poggio_soilgrids_2021]. These algorithms are indeed particularly well adapted to the management of large data sets to map soil properties on large geographic areas in a wide range of situations. The techniques are based on classification and regression algorithms, but they take no account of spatial correlations in residuals [@HEUVELINK2022100639]. This trend towards heavy use of ML tools also seems to be accompanied by a diminished use of geostatistical techniques that often require more computer resources but also profound statistical skills to construct and fine-tune models. Often, prediction is performed in several steps (*eg* regression or any other machine learning prediction in step 1, followed by spatial kriging of the residuals in step 2), but then an accurate assessment of the prediction uncertainties is difficult since uncertainties from the first step must be propagated through to the second step.
 
-In this paper, we propose to solve these issues by using the fully Bayesian estimation framework based on the integrated nested Laplace approximation (INLA,[@Rue2009]), combined with the so-called stochastic partial differential equation approach [SPDE, @Lindgren2011] providing numerically convenient representations of Gaussian processes over continuous space. Over the last decade, the INLA method has become the most popular tool in spatial statistics for estimating a wide variety of Generalized Additive Mixed Models (i.e., Generalized Additive Models with random effects) in a Bayesian setting. It is a relatively easy-to-use alternative to traditional Markov chain Monte Carlo methods by providing off-the-shelf implementation of fast and accurate deterministic approximations of posterior inferences for a large class of models. INLA with SPDE is a powerful combination to handle very large spatial data sets. Models are formulated as Bayesian hierarchical models where covariate effects and Gaussian processes can be additively included in a latent process (that is not directly), whereas the probability distribution of observations can be of various nature (continuous such as gaussian, skew-gaussian, gamma, extreme-value, or discrete such as Poisson, binomial, negative binomial) and its parameters are controlled by the latent process.
+In this paper, we propose to solve these issues by using the fully Bayesian estimation framework based on the integrated nested Laplace approximation (INLA,[@Rue2009]), combined with the so-called stochastic partial differential equation approach [SPDE, @Lindgren2011] providing numerically convenient representations of Gaussian processes over continuous space. Over the last decade, the INLA method has become the most popular tool in spatial statistics for estimating a wide variety of Generalized Additive Mixed Models (i.e., Generalized Additive Models with random effects) in a Bayesian setting. It is a relatively easy-to-use alternative to traditional Markov chain Monte Carlo methods by providing off-the-shelf implementation of fast and accurate deterministic approximations of posterior inferences for a large class of models. INLA with SPDE is a powerful combination to handle very large spatial data sets. Models are formulated as Bayesian hierarchical models where covariate effects and Gaussian processes can be additively included in a latent process (that is not directly), whereas the probability distribution of observations can be of various nature (continuous such as gaussian, skew-gaussian, gamma, extreme-value, or discrete such as Poisson, binomial, negative binomial) and its parameters are controlled by the latent process. 
 
 INLA-SPDE was already introduced by [@Poggio2016] or [@Huang2017] to the pedometrics community. However, wider use of this approach by the community was probably hindered by the complexity of the INLA R package. Recently, the `inlabru` R package [@yuan2017point], originally developed with a strong focus on point process models for discrete data in ecology, has integrated a range of functions to help in implementing INLA-SPDE models in a more convenient way through a more ergonomic interface. We propose here to illustrate how this package works by using a simple and classical regression kriging approach as an example.
+
+When the number of observations is huge, it is important to mention that one can improve the performance of the high-dimensional matrix computations conducted in INLA by using the PARDISO solver library. It is already full included in the standard INLA installation but has to be activated through a licence key. To activate it (free for non commercial uses), go to https://www.pardiso-project.org/r-inla/#license to obtain the license, which will take you at most several minutes. Also, you can type  inla.pardiso() at the R command line for viewing the (very simple) instructions on how to enable the PARDISO sparse library.
 
 # Set up
 
@@ -53,7 +55,7 @@ INLA-SPDE was already introduced by [@Poggio2016] or [@Huang2017] to the pedomet
 
 We use here the set of R packages given in the list below.
 
-The latest version of R (eg \>4.2) should be installed on your computer for using the `inlabru` package. The classical dataset for the Meuse area that we use here is available in the `gstat`package.
+The latest version of R (eg \>4.2) should be installed on your computer for using the `inlabru` package. The classical dataset for the Meuse area that we use here is available in the `gstat`package. 
 
 ```{r}
 #| messages: false
@@ -70,7 +72,7 @@ library(tmap)
 library(ggplot2)
 ```
 
-The `inlabru` method is a convenient wrapper for the `INLA::inla` function and provides multiple enhancements, such as an improved integration of spatial object classes of type `sp` in R, more convenient syntax for defining the structure of the model, convenient functions to perform Bayesian prediction using simulations from the estimated posterior model, and estimation facilities for certain model structures that are not possible with the classical `INLA` package.
+The `inlabru` method is a convenient wrapper for the `INLA::inla` function and provides multiple enhancements, such as an improved integration of spatial object classes of type `sp` in R, more convenient syntax for defining the structure of the model,  convenient functions to perform Bayesian prediction using simulations from the estimated posterior model, and estimation facilities for certain model structures that are not possible with the classical `INLA` package. 
 
 ## Point data and rasters
 
@@ -106,12 +108,14 @@ gridded(meuse.grid) = TRUE
 We construct a hierarchical model for the soil property $z(s)$ of a spatial location $s$ in the framework of the prediction in the presence of exhaustive ancillary information. We will assume the following linkage between model components and observations, where we denote the latent process by $\eta(s)$.
 
 $$
-\eta(s) \sim {\text{Intercept}} + \underbrace{ \sum_{i\in \text{scorpan}}\beta_i z_i(s)}_{\text{Covariates} } +\underbrace{W(s)}_{\text{Spatial Gaussian field}}
-$$ The spatial field $W(s)$ captures autocorrelation not explained by the covariates. The latent process $\eta(s)$ will then be used in the observation-likelihood, which is here chosen as gaussian. We use the `|` notation to indicate conditioning of the property at the left side of `|` o the parameters given to the right side of `|`. This leads to the following hierarchical formulation for the observations,
+\eta(s) \sim {\text{Intercept}} + \underbrace{ \sum_{i\in \text{scorpan}}\beta^{\text{sc}}_i z^{\text{sc}}_i(s)}_{\text{SCORPAN factors} } +\underbrace{W(s)}_{\text{Spatial Gaussian field}}
+$$ 
+The spatial field $W(s)$ captures autocorrelation not explained by the SCORPAN factors. The latent process $\eta(s)$ will then be used in the observation-likelihood, which is here chosen as gaussian. We use the `|` notation to indicate conditioning of the property at the left side of `|` on the parameters given to the right side of `|`. This leads to the following hierarchical formulation for the observations, 
 
 $$
 z(s) | (\eta(s),\theta) \sim \mathcal{N}(\eta(s_i), \sigma^2),
-$$ where different observations $z(s)$ are conditionally independent given the latent process $\eta(s)$ and the hyperparameters in $\theta$ controlling it. This means that we include a `nugget effect` or `measurement error` with variance $\sigma^2$ in the model.
+$$
+where different observations $z(s)$ are conditionally independent given the latent process $\eta(s)$ and the hyperparameters in $\theta$ controlling it. This means that we include  a `nugget effect` or `measurement error`  with variance $\sigma^2$ in the model.
 
 In this paper, $z$ will correspond to the organic matter, `om`. 
 
@@ -119,7 +123,7 @@ In this paper, $z$ will correspond to the organic matter, `om`.
 
 `INLA` and `inlabru` use a space triangulation method to estimate spatial Gaussian effects with a Matérn covariance function. The latent spatial Gaussian random field is computed at the mesh nodes by resolving a Stochastic Partial Differential Equation (SPDE), while it is computed elsewhere by linear interpolation between the mesh nodes. The mesh definition is based on a trade-off between the finer spatial scale of the spatial effect (higher resolution) and a lower number of nodes (lower resolution), where having less nodes usually comes with faster calculations. Many applications already come with a regular grid used to discretize space, such as the `meuse.grid` object here, but often it still makes sense to choose different nodes for the space triangulation used to represent the Gaussian field $W(s)$, especially in cases where the resolution of the grid from the data is too high for being handled directly by INLA. Below, we present how to build a mesh where the construction of the mesh nodes is initialized using the set of coordinates of the calibration sites. This makes sense since can be useful to have a mesh that is relatively denser in areas with many calibration sites (where data provide more information).
 
-First, we create a matrix `xyMesh` with coordinates of the sites. Next, we define the boundaries of the domain used for computing the spatial latent effect with the SPDE approach. Generally, it is better to compute an internal boundary (delimiting the study area where we want to predict) and an external boundary (providing an extension zone around the study area that is necessary to avoid strong boundary effects from the SPDE) with different resolutions. The purpose of the extension zone is to push the outer boundary away from the study area, and we can set a lower mesh resolution in this extension zone where we do not want to predict the soil property.
+First, we create a matrix `xyMesh` with coordinates of the sites. Next, we define the boundaries of the domain used for computing the spatial latent effect with the SPDE approach. Generally, it is better to compute an internal boundary (delimiting the study area where we want to predict) and an external boundary (providing an extension zone around the study area that is necessary to avoid strong boundary effects from the SPDE) with different resolutions. The purpose of the extension zone is to push the outer boundary away from the study area, and we can set a lower mesh resolution in this extension zone where we do not want to predict the soil property. 
 
 The `INLA::inla.mesh.2d` function creates a triangle mesh based on initial point locations, specified or automatic boundaries, and mesh quality parameters, in particular the `cutoff`. This tuning parameter sets the minimum length of edges between two nodes and allows to keep the number of nodes at most moderately high and to avoid instabilities in computations related to the covariance structure due to very high Gaussian correlation at nodes that are very close in space. More information is provided here: https://rpubs.com/jafet089/886687
 
@@ -156,7 +160,7 @@ We specify these parameters in our model by selecting a penalized complexity pri
 ```{r}
 matern <-
   INLA::inla.spde2.pcmatern(mesh,
-                      alpha = 2,
+                      alpha = 2,# fractional operator which is related
                       prior.sigma = c(1, 0.5),# P(sigma > 1) = 0.5
                       prior.range = c(10000, 0.9)  # P(range < 10000 m) = 0.9
   )
@@ -179,18 +183,17 @@ Finally, we fit the hierarchical model to the data using the `bru` function of t
 
 The spatial domain where the data were collected and where we want to perform predictions can also be provided using the (`domainSP`).
 
-For handling the uncertainty stemming from the prior distributions of hyperparameters (here the standard deviation and the correlation range), we use the `eb` strategy as it is much quicker to compute but a bit less accurate. This `empirical Bayes` approach sets the hyperparameters to their `maximum a posteriori` for some of the calculations performed during the estimation algorithm, that is, it uses a mechanism similar to frequentist inference techniques for handling the hyperparameters.
+For handling the uncertainty stemming from the prior distributions of hyperparameters (here the standard deviation and the correlation range), we use the `eb` strategy as it is much quicker to compute but a bit less accurate. This `empirical Bayes` approach sets the hyperparameters to their `maximum a posteriori` for some of the calculations performed during the estimation algorithm, that is, it uses a mechanism similar to frequentist inference techniques for handling the hyperparameters. 
 
 ```{r}
 fit <- inlabru:: bru(components = cmp,
            data = meuse,
-           family = "gaussian",
+           family = "gamma",
            domain = list(coordinates = mesh),
            options = list(
              control.inla = list(int.strategy = "eb"),
              verbose = FALSE)
            )
-
 ```
 
 The summary of the fitted model gives the posterior estimates of fixed effects (intercept and elevation) and hyperparameters (standard deviation and range of the Gaussian random field).
@@ -203,14 +206,14 @@ summary(fit)
 
 # Spatial predictions
 
-Now we use the fit to predict the field on a lattice, and therefore generate a set of results using 100 realizations from the posterior distribution of the model. The approach of using posterior simulation for prediction allows us to appropriately represent the uncertainties in the predictions, and we can choose very flexibly for which parameters and properties we would like to provide predictions.
+Now we use the fit to predict the field on a lattice, and therefore generate a set of results using 100 realizations from the posterior distribution of the model. The approach of using posterior simulation for prediction allows us to appropriately represent the uncertainties in the predictions, and we can choose very flexibly for which parameters and properties we would like to provide predictions. In the predictor formula, we use the `exp` function to take into account the log-link between the mean of the gamma distribution of the `om` variable and our linear predictor.
 
 ```{r}
 pred <- predict(
   fit,
   n.samples = 100,
   meuse.grid,
-  ~ field + Intercept + dist ,
+  ~ exp(field + Intercept + dist),
   num.threads = 2
 )
 ```
@@ -220,7 +223,7 @@ Internally, the `predict` function draws samples from the posterior distribution
 ```{r}
 samp <- generate(fit, 
                  meuse.grid,
-                 ~ field + Intercept + dist ,
+                 ~ exp(field + Intercept + dist),
                  n.samples = 5
 )
 
@@ -231,7 +234,7 @@ pred$sample <- samp[, 1]
 
 # Plotting results
 
-## The different effects
+## The differents effects
 
 We can plot the posterior densities for the latent effect `Intercept` and `distance` to the border.
 
@@ -271,7 +274,7 @@ tm_shape(pred) +
     )
 ```
 
-## One realization of the posterior distribution
+## One realisation of the posterior distribution
 
 The sample from the posterior distribution can be mapped as follows.
 
@@ -313,7 +316,7 @@ tm_shape(pred) +
 
 ```
 
-# Final remarks
+# rSPDE fit
 
 The goal of [inlabru](http://inlabru.org/) is to facilitate spatial modeling using integrated nested Laplace approximation via the [R-INLA package](https://www.r-inla.org/). The recent developments allow now to construct in a convenient way Bayesian spatial model (INLA-SPDE) of soil properties and their uncertainty. Model components are specified with general inputs and mapping methods to the latent variables, and the predictors are specified via general R expressions.
 
@@ -321,13 +324,11 @@ When the number of observations is huge, it is important to mention that one can
 
 One need to indicate the likelihood family such as `gaussian`, `poisson` or `binomial`. By default family is `gaussian`. A list of possible alternatives can be seen by typing `names(inla.models()$likelihood)`. It is therefore possible to fit a wide range of model allowing to approach a great diversity of problems in soil science. It is for example possible to fit use the `gamma` family in this example to cope with heavy tail.
 
-Heuvelink and Webster [-@HEUVELINK2022100639]  listed a set of challenges for pedometricians and spatial statisticians  to strengthen the role of spatial statistics. Without being able to solve all of them, it seems to us that `INLA` by providing a fully Bayesian modelling in a rapid and convinent way can provide some answers to some of them, e.g., the better uncertainty quantification, the change of support, incorporating attribute and positional measurement uncertainty. 
+Heuvelink and Webster [-@HEUVELINK2022100639]  listed a set of challenges for pedometricians and spatial statisticians  to strengthen the role of spatial statistics. Without being able to solve all of them, it seems to us that `INLA` by providing a fully Bayesian modelling in a rapid and continent way can provide some answers to some of them, e.g., the better uncertainty quantification, the change of support, incorporating attribute and positional measurement uncertainty. 
 
 # Code availability
 
 The code is also available on github : https://github.com/nsaby/pedometron042023
-
-More codes are available here: https://inlabru-org.github.io/inlabru/articles/web/random_fields_2d.html
 
 # References
 
