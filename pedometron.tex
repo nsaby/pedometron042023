@@ -213,7 +213,7 @@ Opitz\textsuperscript{2}}
 
 \begin{document}
 \maketitle
-\ifdefined\Shaded\renewenvironment{Shaded}{\begin{tcolorbox}[boxrule=0pt, enhanced, frame hidden, interior hidden, borderline west={3pt}{0pt}{shadecolor}, sharp corners, breakable]}{\end{tcolorbox}}\fi
+\ifdefined\Shaded\renewenvironment{Shaded}{\begin{tcolorbox}[enhanced, interior hidden, frame hidden, sharp corners, borderline west={3pt}{0pt}{shadecolor}, boxrule=0pt, breakable]}{\end{tcolorbox}}\fi
 
 \renewcommand*\contentsname{Table of contents}
 {
@@ -404,8 +404,14 @@ side of \texttt{\textbar{}}. This leads to the following hierarchical
 formulation for the observations,
 
 \[
-z(s) | (\eta(s),\theta) \sim \mathcal{N}(\eta(s_i), \sigma^2),
-\] where different observations \(z(s)\) are conditionally independent
+z(s) | (\eta(s),\theta) \sim \Gamma(\exp(\eta(s_i)), \tau),
+\] where the Gamma distribution is parametrized in a way such that
+\(\exp(\eta(s_i))\) is its mean and \(\tau\) is a dispersion parameter
+related to the variance around the mean.
+\(\theta = (\theta_\eta, \tau)\) with \(\theta_\eta\) the
+hyperparameters controlling the linear predictors \(\eta\).
+
+Moreover different observations \(z(s)\) are conditionally independent
 given the latent process \(\eta(s)\) and the hyperparameters in
 \(\theta\) controlling it. This means that we include a
 \texttt{nugget\ effect} or \texttt{measurement\ error} with variance
@@ -545,9 +551,6 @@ requires the model components defined earlier (\texttt{cmp}), the
 dataset (\texttt{meuse}), the mesh (\texttt{mesh}) where the model will
 be evaluated, and several options to control the INLA algorithm.
 
-The spatial domain where the data were collected and where we want to
-perform predictions can also be provided using the (\texttt{domainSP}).
-
 For handling the uncertainty stemming from the prior distributions of
 hyperparameters (here the standard deviation and the correlation range),
 we use the \texttt{eb} strategy as it is much quicker to compute but a
@@ -557,16 +560,26 @@ calculations performed during the estimation algorithm, that is, it uses
 a mechanism similar to frequentist inference techniques for handling the
 hyperparameters.
 
+One need to indicate the likelihood family such as \texttt{gaussian},
+\texttt{poisson} or \texttt{binomial}. By default family is
+\texttt{gaussian}. A list of possible alternatives can be seen by typing
+\texttt{names(inla.models()\$likelihood)}. It is therefore possible to
+fit a wide range of model allowing to approach a great diversity of
+problems in soil science. We use here the \texttt{gamma} family to cope
+with heavy tail.
+
 \begin{Shaded}
 \begin{Highlighting}[]
-\NormalTok{fit }\OtherTok{\textless{}{-}}\NormalTok{ inlabru}\SpecialCharTok{::} \FunctionTok{bru}\NormalTok{(}\AttributeTok{components =}\NormalTok{ cmp,}
-           \AttributeTok{data =}\NormalTok{ meuse,}
-           \AttributeTok{family =} \StringTok{"gamma"}\NormalTok{,}
-           \AttributeTok{domain =} \FunctionTok{list}\NormalTok{(}\AttributeTok{coordinates =}\NormalTok{ mesh),}
-           \AttributeTok{options =} \FunctionTok{list}\NormalTok{(}
-             \AttributeTok{control.inla =} \FunctionTok{list}\NormalTok{(}\AttributeTok{int.strategy =} \StringTok{"eb"}\NormalTok{),}
-             \AttributeTok{verbose =} \ConstantTok{FALSE}\NormalTok{)}
-\NormalTok{           )}
+\NormalTok{fit }\OtherTok{\textless{}{-}}\NormalTok{ inlabru}\SpecialCharTok{::}\FunctionTok{bru}\NormalTok{(}
+  \AttributeTok{components =}\NormalTok{ cmp,}
+  \AttributeTok{data =}\NormalTok{ meuse,}
+  \AttributeTok{family =} \StringTok{"gamma"}\NormalTok{,}
+  \AttributeTok{domain =} \FunctionTok{list}\NormalTok{(}\AttributeTok{coordinates =}\NormalTok{ mesh),}
+  \AttributeTok{options =} \FunctionTok{list}\NormalTok{(}
+    \AttributeTok{control.inla =} \FunctionTok{list}\NormalTok{(}\AttributeTok{int.strategy =} \StringTok{"eb"}\NormalTok{),}
+    \AttributeTok{verbose =} \ConstantTok{FALSE}
+\NormalTok{  )}
+\NormalTok{)}
 \end{Highlighting}
 \end{Shaded}
 
@@ -597,7 +610,7 @@ Likelihoods:
     Data class: 'SpatialPointsDataFrame'
     Predictor: om ~ .
 Time used:
-    Pre = 1.32, Running = 1.2, Post = 0.0579, Total = 2.58 
+    Pre = 1.39, Running = 1.12, Post = 0.059, Total = 2.57 
 Fixed effects:
             mean    sd 0.025quant 0.5quant 0.975quant   mode kld
 Intercept  2.349 0.223      1.912    2.349      2.785  2.349   0
@@ -610,7 +623,7 @@ Random effects:
 Model hyperparameters:
                                                    mean      sd 0.025quant
 Precision parameter for the Gamma observations   14.227   2.487      9.969
-Range for field                                1760.208 831.851    781.670
+Range for field                                1760.211 831.851    781.669
 Stdev for field                                   0.555   0.175      0.318
                                                0.5quant 0.975quant    mode
 Precision parameter for the Gamma observations    14.01     19.738   13.58
@@ -642,6 +655,10 @@ and properties we would like to provide predictions. In the predictor
 formula, we use the \texttt{exp} function to take into account the
 log-link between the mean of the gamma distribution of the \texttt{om}
 variable and our linear predictor.
+
+In the predictor formula, we use the \texttt{exp} function to take into
+account the log-link between the mean of the gamma distribution of the
+\texttt{om} variable and our linear predictor.
 
 \begin{Shaded}
 \begin{Highlighting}[]
@@ -675,7 +692,7 @@ first one.
 \end{Shaded}
 
 \begin{verbatim}
- num [1:3103, 1:5] 11.2 12.2 11.7 10.4 12.4 ...
+ num [1:3103, 1:5] 12.5 14 13 11.5 14.5 ...
 \end{verbatim}
 
 \begin{Shaded}
@@ -841,26 +858,22 @@ allow now to construct in a convenient way Bayesian spatial model
 are specified with general inputs and mapping methods to the latent
 variables, and the predictors are specified via general R expressions.
 
-When the number of observations is huge, it is important to mention that
-one can improve the performance of the high-dimensional matrix
-computations conducted in INLA by using the PARDISO solver library. It
-is already full included in the standard INLA installation but has to be
-activated through a licence key. To activate it (free for non commercial
-uses), go to https://www.pardiso-project.org/r-inla/\#license to obtain
-the license, which will take you at most several minutes. Also, you can
-type inla.pardiso() at the R command line for viewing the (very simple)
+In their study, Poggio et al. (2016) and Huang et al. (2017) reported
+that INLA-SPDE became quite slow when estimating the posterior marginal
+distributions of the environmental variables associated with large
+datasets. When the number of observations is huge, it is important to
+mention that one can improve the performance of the high-dimensional
+matrix computations conducted in INLA by using the PARDISO solver
+library. It is already full included in the standard INLA installation
+but has to be activated through a licence key. To activate it (free for
+non commercial uses), go to
+https://www.pardiso-project.org/r-inla/\#license to obtain the license,
+which will take you at most several minutes. Also, you can type
+inla.pardiso() at the R command line for viewing the (very simple)
 instructions on how to enable the PARDISO sparse library. Moreover, new
 developments are underway for especially data-rich model to achieve even
-faster inference, improved numerical stability and scalability (Van
-Niekerk et al. 2023)
-
-One need to indicate the likelihood family such as \texttt{gaussian},
-\texttt{poisson} or \texttt{binomial}. By default family is
-\texttt{gaussian}. A list of possible alternatives can be seen by typing
-\texttt{names(inla.models()\$likelihood)}. It is therefore possible to
-fit a wide range of model allowing to approach a great diversity of
-problems in soil science. It is for example possible to fit use the
-\texttt{gamma} family in this example to cope with heavy tail.
+faster inference, improved numerical stability and scalability using
+variational approximation (Van Niekerk et al. 2023).
 
 Heuvelink and Webster (2022) listed a set of challenges for
 pedometricians and spatial statisticians to strengthen the role of

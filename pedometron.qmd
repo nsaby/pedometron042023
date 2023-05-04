@@ -8,6 +8,7 @@ authors:
   - name: Thomas Opitz
     affiliations:
       - ref: eu
+    url: https://biosp.mathnum.inrae.fr/homepage-thomas-opitz
 affiliations:
   - id: uf
     name: INRAE, Info&Sols, Orléans, France
@@ -110,8 +111,13 @@ $$
 $$ The spatial field $W(s)$ captures autocorrelation not explained by the covariates. The latent process $\eta(s)$ will then be used in the observation-likelihood, which is here chosen as gaussian. We use the `|` notation to indicate conditioning of the property at the left side of `|` o the parameters given to the right side of `|`. This leads to the following hierarchical formulation for the observations,
 
 $$
-z(s) | (\eta(s),\theta) \sim \mathcal{N}(\eta(s_i), \sigma^2),
-$$ where different observations $z(s)$ are conditionally independent given the latent process $\eta(s)$ and the hyperparameters in $\theta$ controlling it. This means that we include a `nugget effect` or `measurement error` with variance $\sigma^2$ in the model.
+z(s) | (\eta(s),\theta) \sim \Gamma(\exp(\eta(s_i)), \tau),
+$$ 
+where the Gamma distribution is parametrized in a way such that $\exp(\eta(s_i))$ is its mean and $\tau$ is a dispersion parameter related to the variance around the mean. $\theta = (\theta_\eta, \tau)$ with $\theta_\eta$ the hyperparameters controlling the linear predictors $\eta$. 
+
+Moreover different observations $z(s)$ are conditionally independent given the latent process $\eta(s)$ and the hyperparameters in $\theta$ controlling it. This means that we include a `nugget effect` or `measurement error` with variance $\sigma^2$ in the model.
+
+
 
 In this paper, $z$ will correspond to the organic matter, `om`. 
 
@@ -177,21 +183,23 @@ cmp <- om ~
 
 Finally, we fit the hierarchical model to the data using the `bru` function of the `inlabru` package. This function requires the model components defined earlier (`cmp`), the dataset (`meuse`), the mesh (`mesh`) where the model will be evaluated, and several options to control the INLA algorithm.
 
-The spatial domain where the data were collected and where we want to perform predictions can also be provided using the (`domainSP`).
+
 
 For handling the uncertainty stemming from the prior distributions of hyperparameters (here the standard deviation and the correlation range), we use the `eb` strategy as it is much quicker to compute but a bit less accurate. This `empirical Bayes` approach sets the hyperparameters to their `maximum a posteriori` for some of the calculations performed during the estimation algorithm, that is, it uses a mechanism similar to frequentist inference techniques for handling the hyperparameters.
 
-One need to indicate the likelihood family such as `gaussian`, `poisson` or `binomial`. By default family is `gaussian`. A list of possible alternatives can be seen by typing `names(inla.models()$likelihood)`. It is therefore possible to fit a wide range of model allowing to approach a great diversity of problems in soil science. It is for example possible to fit use the `gamma` family in this example to cope with heavy tail.
+One need to indicate the likelihood family such as `gaussian`, `poisson` or `binomial`. By default family is `gaussian`. A list of possible alternatives can be seen by typing `names(inla.models()$likelihood)`. It is therefore possible to fit a wide range of model allowing to approach a great diversity of problems in soil science. We use here the `gamma` family  to cope with heavy tail.
 
 ```{r}
-fit <- inlabru:: bru(components = cmp,
-           data = meuse,
-           family = "gamma",
-           domain = list(coordinates = mesh),
-           options = list(
-             control.inla = list(int.strategy = "eb"),
-             verbose = FALSE)
-           )
+fit <- inlabru::bru(
+  components = cmp,
+  data = meuse,
+  family = "gamma",
+  domain = list(coordinates = mesh),
+  options = list(
+    control.inla = list(int.strategy = "eb"),
+    verbose = FALSE
+  )
+)
 
 ```
 
@@ -321,7 +329,7 @@ tm_shape(pred) +
 
 The goal of [inlabru](http://inlabru.org/) is to facilitate spatial modeling using integrated nested Laplace approximation via the [R-INLA package](https://www.r-inla.org/). The recent developments allow now to construct in a convenient way Bayesian spatial model (INLA-SPDE) of soil properties and their uncertainty. Model components are specified with general inputs and mapping methods to the latent variables, and the predictors are specified via general R expressions.
 
-When the number of observations is huge, it is important to mention that one can improve the performance of the high-dimensional matrix computations conducted in INLA by using the PARDISO solver library. It is already full included in the standard INLA installation but has to be activated through a licence key. To activate it (free for non commercial uses), go to https://www.pardiso-project.org/r-inla/#license to obtain the license, which will take you at most several minutes. Also, you can type inla.pardiso() at the R command line for viewing the (very simple) instructions on how to enable the PARDISO sparse library. Moreover, new developments are underway for especially data-rich model to achieve even faster inference, improved numerical stability and scalability [@VANNIEKERK2023107692]
+In their study, Poggio et al. [-@Poggio2016] and Huang et al. [-@Huang2017] reported  that INLA-SPDE became quite slow when estimating the posterior marginal distributions of the environmental variables associated with large datasets. When the number of observations is huge, it is important to mention that one can improve the performance of the high-dimensional matrix computations conducted in INLA by using the PARDISO solver library. It is already full included in the standard INLA installation but has to be activated through a licence key. To activate it (free for non commercial uses), go to https://www.pardiso-project.org/r-inla/#license to obtain the license, which will take you at most several minutes. Also, you can type inla.pardiso() at the R command line for viewing the (very simple) instructions on how to enable the PARDISO sparse library. Moreover, new developments are underway for especially data-rich model to achieve even faster inference, improved numerical stability and scalability using variational approximation [@VANNIEKERK2023107692]. 
 
 
 Heuvelink and Webster [-@HEUVELINK2022100639]  listed a set of challenges for pedometricians and spatial statisticians  to strengthen the role of spatial statistics. Without being able to solve all of them, it seems to us that `INLA` by providing a fully Bayesian modelling in a rapid and convinent way can provide some answers to some of them, e.g., the better uncertainty quantification, the change of support, incorporating attribute and positional measurement uncertainty. 
