@@ -213,7 +213,7 @@ Opitz\textsuperscript{2}}
 
 \begin{document}
 \maketitle
-\ifdefined\Shaded\renewenvironment{Shaded}{\begin{tcolorbox}[frame hidden, boxrule=0pt, breakable, enhanced, sharp corners, interior hidden, borderline west={3pt}{0pt}{shadecolor}]}{\end{tcolorbox}}\fi
+\ifdefined\Shaded\renewenvironment{Shaded}{\begin{tcolorbox}[frame hidden, enhanced, interior hidden, borderline west={3pt}{0pt}{shadecolor}, sharp corners, breakable, boxrule=0pt]}{\end{tcolorbox}}\fi
 
 \renewcommand*\contentsname{Table of contents}
 {
@@ -221,8 +221,8 @@ Opitz\textsuperscript{2}}
 \setcounter{tocdepth}{3}
 \tableofcontents
 }
-\textsuperscript{1} INRAe, Info\&Sols, Orléans, France\\
-\textsuperscript{2} INRAe, BioSP, Avignon, France
+\textsuperscript{1} INRAE, Info\&Sols, Orléans, France\\
+\textsuperscript{2} INRAE, BioSP, Avignon, France
 
 \hypertarget{introduction}{%
 \section{Introduction}\label{introduction}}
@@ -391,27 +391,34 @@ We construct a hierarchical model for the soil property \(z(s)\) of a
 spatial location \(s\) in the framework of the prediction in the
 presence of exhaustive ancillary information. We will assume the
 following linkage between model components and observations, where we
-denote the latent process by \(\eta(s)\).
+denote the latent process by \(\eta(s)\). In this paper, \(z\) will
+correspond to the organic matter, \texttt{om}.
 
 \[
 \eta(s) \sim {\text{Intercept}} + \underbrace{ \sum_{i\in \text{scorpan}}\beta_i z_i(s)}_{\text{Covariates} } +\underbrace{W(s)}_{\text{Spatial Gaussian field}}
 \] The spatial field \(W(s)\) captures autocorrelation not explained by
 the covariates. The latent process \(\eta(s)\) will then be used in the
-observation-likelihood, which is here chosen as gaussian. We use the
-\texttt{\textbar{}} notation to indicate conditioning of the property at
-the left side of \texttt{\textbar{}} o the parameters given to the right
-side of \texttt{\textbar{}}. This leads to the following hierarchical
-formulation for the observations,
+observation-likelihood, which is here chosen as gamma distribution as
+soil carbon is known to present a heavy-tailed distribution.
+
+We use the \texttt{\textbar{}} notation to indicate conditioning of the
+property at the left side of \texttt{\textbar{}} o the parameters given
+to the right side of \texttt{\textbar{}}. This leads to the following
+hierarchical formulation for the observations,
 
 \[
-z(s) | (\eta(s),\theta) \sim \mathcal{N}(\eta(s_i), \sigma^2),
-\] where different observations \(z(s)\) are conditionally independent
+z(s) | (\eta(s),\theta) \sim \Gamma(\exp(\eta(s_i)), \tau),
+\] where the Gamma distribution is parametrized in a way such that
+\(\exp(\eta(s_i))\) is its mean and \(\tau\) is a dispersion parameter
+related to the variance around the mean.
+\(\theta = (\theta_\eta, \tau)\) with \(\theta_\eta\) the
+hyperparameters controlling the linear predictors \(\eta\).
+
+Moreover different observations \(z(s)\) are conditionally independent
 given the latent process \(\eta(s)\) and the hyperparameters in
 \(\theta\) controlling it. This means that we include a
 \texttt{nugget\ effect} or \texttt{measurement\ error} with variance
 \(\sigma^2\) in the model.
-
-In this paper, \(z\) will correspond to the organic matter, \texttt{om}.
 
 \hypertarget{construction-of-the-mesh-for-the-spde-model}{%
 \subsection{Construction of the mesh for the SPDE
@@ -545,9 +552,6 @@ requires the model components defined earlier (\texttt{cmp}), the
 dataset (\texttt{meuse}), the mesh (\texttt{mesh}) where the model will
 be evaluated, and several options to control the INLA algorithm.
 
-The spatial domain where the data were collected and where we want to
-perform predictions can also be provided using the (\texttt{domainSP}).
-
 For handling the uncertainty stemming from the prior distributions of
 hyperparameters (here the standard deviation and the correlation range),
 we use the \texttt{eb} strategy as it is much quicker to compute but a
@@ -557,16 +561,26 @@ calculations performed during the estimation algorithm, that is, it uses
 a mechanism similar to frequentist inference techniques for handling the
 hyperparameters.
 
+One need to indicate the likelihood family such as \texttt{gaussian},
+\texttt{poisson} or \texttt{binomial}. By default family is
+\texttt{gaussian}. A list of possible alternatives can be seen by typing
+\texttt{names(inla.models()\$likelihood)}. It is therefore possible to
+fit a wide range of model allowing to approach a great diversity of
+problems in soil science. We use here the \texttt{gamma} family to cope
+with heavy tail.
+
 \begin{Shaded}
 \begin{Highlighting}[]
-\NormalTok{fit }\OtherTok{\textless{}{-}}\NormalTok{ inlabru}\SpecialCharTok{::} \FunctionTok{bru}\NormalTok{(}\AttributeTok{components =}\NormalTok{ cmp,}
-           \AttributeTok{data =}\NormalTok{ meuse,}
-           \AttributeTok{family =} \StringTok{"gaussian"}\NormalTok{,}
-           \AttributeTok{domain =} \FunctionTok{list}\NormalTok{(}\AttributeTok{coordinates =}\NormalTok{ mesh),}
-           \AttributeTok{options =} \FunctionTok{list}\NormalTok{(}
-             \AttributeTok{control.inla =} \FunctionTok{list}\NormalTok{(}\AttributeTok{int.strategy =} \StringTok{"eb"}\NormalTok{),}
-             \AttributeTok{verbose =} \ConstantTok{FALSE}\NormalTok{)}
-\NormalTok{           )}
+\NormalTok{fit }\OtherTok{\textless{}{-}}\NormalTok{ inlabru}\SpecialCharTok{::}\FunctionTok{bru}\NormalTok{(}
+  \AttributeTok{components =}\NormalTok{ cmp,}
+  \AttributeTok{data =}\NormalTok{ meuse,}
+  \AttributeTok{family =} \StringTok{"gamma"}\NormalTok{,}
+  \AttributeTok{domain =} \FunctionTok{list}\NormalTok{(}\AttributeTok{coordinates =}\NormalTok{ mesh),}
+  \AttributeTok{options =} \FunctionTok{list}\NormalTok{(}
+    \AttributeTok{control.inla =} \FunctionTok{list}\NormalTok{(}\AttributeTok{int.strategy =} \StringTok{"eb"}\NormalTok{),}
+    \AttributeTok{verbose =} \ConstantTok{FALSE}
+\NormalTok{  )}
+\NormalTok{)}
 \end{Highlighting}
 \end{Shaded}
 
@@ -593,38 +607,38 @@ field: main = spde(coordinates)
 Intercept: main = linear(1)
 dist: main = linear(dist)
 Likelihoods:
-  Family: 'gaussian'
+  Family: 'gamma'
     Data class: 'SpatialPointsDataFrame'
     Predictor: om ~ .
 Time used:
-    Pre = 1.36, Running = 0.972, Post = 0.0566, Total = 2.38 
+    Pre = 1.25, Running = 1.18, Post = 0.058, Total = 2.49 
 Fixed effects:
-             mean    sd 0.025quant 0.5quant 0.975quant    mode kld
-Intercept  10.961 1.133      8.739   10.961     13.182  10.961   0
-dist      -11.574 2.589    -16.647  -11.574     -6.500 -11.574   0
+            mean    sd 0.025quant 0.5quant 0.975quant   mode kld
+Intercept  2.349 0.223      1.912    2.349      2.785  2.349   0
+dist      -1.311 0.390     -2.076   -1.311     -0.547 -1.311   0
 
 Random effects:
   Name    Model
     field SPDE2 model
 
 Model hyperparameters:
-                                            mean      sd 0.025quant 0.5quant
-Precision for the Gaussian observations    0.336   0.083      0.204    0.326
-Range for field                         1067.735 425.628    521.527  974.572
-Stdev for field                            3.178   0.757      2.036    3.061
-                                        0.975quant    mode
-Precision for the Gaussian observations       0.53   0.304
-Range for field                            2156.51 812.252
-Stdev for field                               4.99   2.810
+                                                   mean      sd 0.025quant
+Precision parameter for the Gamma observations   14.227   2.487      9.969
+Range for field                                1760.208 831.851    781.670
+Stdev for field                                   0.555   0.175      0.318
+                                               0.5quant 0.975quant    mode
+Precision parameter for the Gamma observations    14.01     19.738   13.58
+Range for field                                 1558.31   3944.193 1227.82
+Stdev for field                                    0.52      0.996    0.45
 
-Deviance Information Criterion (DIC) ...............: 670.40
-Deviance Information Criterion (DIC, saturated) ....: 215.50
-Effective number of parameters .....................: 61.12
+Deviance Information Criterion (DIC) ...............: 664.90
+Deviance Information Criterion (DIC, saturated) ....: 203.62
+Effective number of parameters .....................: 47.08
 
-Watanabe-Akaike information criterion (WAIC) ...: 671.69
-Effective number of parameters .................: 49.16
+Watanabe-Akaike information criterion (WAIC) ...: 661.10
+Effective number of parameters .................: 35.86
 
-Marginal log-Likelihood:  -380.50 
+Marginal log-Likelihood:  -366.62 
  is computed 
 Posterior summaries for the linear predictor and the fitted values are computed
 (Posterior marginals needs also 'control.compute=list(return.marginals.predictor=TRUE)')
@@ -638,7 +652,14 @@ generate a set of results using 100 realizations from the posterior
 distribution of the model. The approach of using posterior simulation
 for prediction allows us to appropriately represent the uncertainties in
 the predictions, and we can choose very flexibly for which parameters
-and properties we would like to provide predictions.
+and properties we would like to provide predictions. In the predictor
+formula, we use the \texttt{exp} function to take into account the
+log-link between the mean of the gamma distribution of the \texttt{om}
+variable and our linear predictor.
+
+In the predictor formula, we use the \texttt{exp} function to take into
+account the log-link between the mean of the gamma distribution of the
+\texttt{om} variable and our linear predictor.
 
 \begin{Shaded}
 \begin{Highlighting}[]
@@ -646,7 +667,7 @@ and properties we would like to provide predictions.
 \NormalTok{  fit,}
   \AttributeTok{n.samples =} \DecValTok{100}\NormalTok{,}
 \NormalTok{  meuse.grid,}
-  \SpecialCharTok{\textasciitilde{}}\NormalTok{ field }\SpecialCharTok{+}\NormalTok{ Intercept }\SpecialCharTok{+}\NormalTok{ dist ,}
+  \SpecialCharTok{\textasciitilde{}} \FunctionTok{exp}\NormalTok{(field }\SpecialCharTok{+}\NormalTok{ Intercept }\SpecialCharTok{+}\NormalTok{ dist) ,}
   \AttributeTok{num.threads =} \DecValTok{2}
 \NormalTok{)}
 \end{Highlighting}
@@ -663,7 +684,7 @@ first one.
 \begin{Highlighting}[]
 \NormalTok{samp }\OtherTok{\textless{}{-}} \FunctionTok{generate}\NormalTok{(fit, }
 \NormalTok{                 meuse.grid,}
-                 \SpecialCharTok{\textasciitilde{}}\NormalTok{ field }\SpecialCharTok{+}\NormalTok{ Intercept }\SpecialCharTok{+}\NormalTok{ dist ,}
+                 \SpecialCharTok{\textasciitilde{}} \FunctionTok{exp}\NormalTok{(field }\SpecialCharTok{+}\NormalTok{ Intercept }\SpecialCharTok{+}\NormalTok{ dist) ,}
                  \AttributeTok{n.samples =} \DecValTok{5}
 \NormalTok{)}
 
@@ -672,7 +693,7 @@ first one.
 \end{Shaded}
 
 \begin{verbatim}
- num [1:3103, 1:5] 14.1 13.5 13.1 13.1 13.7 ...
+ num [1:3103, 1:5] 15.2 15.9 13.9 12.2 16.6 ...
 \end{verbatim}
 
 \begin{Shaded}
@@ -737,8 +758,8 @@ gaussiant field: range and variance
 uncertainty}\label{the-spatial-predictions-with-uncertainty}}
 
 We can plot the median, lower 95\% and upper 95\% density surfaces as
-follows (assuming that the predicted intensity is in object
-\texttt{pred}).
+follows as follows (assuming that the predicted soil property is in
+object \texttt{pred}).
 
 \begin{Shaded}
 \begin{Highlighting}[]
@@ -807,7 +828,7 @@ Next, we plot the 2 effects of the model:
 \NormalTok{  fit,}
   \AttributeTok{n.samples =} \DecValTok{100}\NormalTok{,}
 \NormalTok{  meuse.grid,}
-  \SpecialCharTok{\textasciitilde{}}\NormalTok{  Intercept }\SpecialCharTok{+}\NormalTok{ dist  ,}
+  \SpecialCharTok{\textasciitilde{}}  \FunctionTok{exp}\NormalTok{(Intercept }\SpecialCharTok{+}\NormalTok{ dist)  ,}
   \AttributeTok{num.threads =} \DecValTok{2}
 \NormalTok{)}
 
@@ -838,26 +859,22 @@ allow now to construct in a convenient way Bayesian spatial model
 are specified with general inputs and mapping methods to the latent
 variables, and the predictors are specified via general R expressions.
 
-When the number of observations is huge, it is important to mention that
-one can improve the performance of the high-dimensional matrix
-computations conducted in INLA by using the PARDISO solver library. It
-is already full included in the standard INLA installation but has to be
-activated through a licence key. To activate it (free for non commercial
-uses), go to https://www.pardiso-project.org/r-inla/\#license to obtain
-the license, which will take you at most several minutes. Also, you can
-type inla.pardiso() at the R command line for viewing the (very simple)
+In their study, Poggio et al. (2016) and Huang et al. (2017) reported
+that INLA-SPDE became quite slow when estimating the posterior marginal
+distributions of the environmental variables associated with large
+datasets. When the number of observations is huge, it is important to
+mention that one can improve the performance of the high-dimensional
+matrix computations conducted in INLA by using the PARDISO solver
+library. It is already full included in the standard INLA installation
+but has to be activated through a licence key. To activate it (free for
+non commercial uses), go to
+https://www.pardiso-project.org/r-inla/\#license to obtain the license,
+which will take you at most several minutes. Also, you can type
+inla.pardiso() at the R command line for viewing the (very simple)
 instructions on how to enable the PARDISO sparse library. Moreover, new
 developments are underway for especially data-rich model to achieve even
-faster inference, improved numerical stability and scalability (Van
-Niekerk et al. 2023)
-
-One need to indicate the likelihood family such as \texttt{gaussian},
-\texttt{poisson} or \texttt{binomial}. By default family is
-\texttt{gaussian}. A list of possible alternatives can be seen by typing
-\texttt{names(inla.models()\$likelihood)}. It is therefore possible to
-fit a wide range of model allowing to approach a great diversity of
-problems in soil science. It is for example possible to fit use the
-\texttt{gamma} family in this example to cope with heavy tail.
+faster inference, improved numerical stability and scalability using
+variational approximation (Van Niekerk et al. 2023).
 
 Heuvelink and Webster (2022) listed a set of challenges for
 pedometricians and spatial statisticians to strengthen the role of
