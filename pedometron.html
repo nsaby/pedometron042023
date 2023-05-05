@@ -251,15 +251,15 @@ div.csl-indent {
 <h1>Fully Bayesian DSM approach</h1>
 <section id="the-hierarchical-dsm-model" class="level2">
 <h2 class="anchored" data-anchor-id="the-hierarchical-dsm-model">The hierarchical DSM model</h2>
-<p>We construct a hierarchical model for the soil property <span class="math inline">\(z(s)\)</span> of a spatial location <span class="math inline">\(s\)</span> in the framework of the prediction in the presence of exhaustive ancillary information. We will assume the following linkage between model components and observations, where we denote the latent process by <span class="math inline">\(\eta(s)\)</span>.</p>
+<p>We construct a hierarchical model for the soil property <span class="math inline">\(z(s)\)</span> of a spatial location <span class="math inline">\(s\)</span> in the framework of the prediction in the presence of exhaustive ancillary information. We will assume the following linkage between model components and observations, where we denote the latent process by <span class="math inline">\(\eta(s)\)</span>. In this paper, <span class="math inline">\(z\)</span> will correspond to the organic matter, <code>om</code>.</p>
 <p><span class="math display">\[
 \eta(s) \sim {\text{Intercept}} + \underbrace{ \sum_{i\in \text{scorpan}}\beta_i z_i(s)}_{\text{Covariates} } +\underbrace{W(s)}_{\text{Spatial Gaussian field}}
-\]</span> The spatial field <span class="math inline">\(W(s)\)</span> captures autocorrelation not explained by the covariates. The latent process <span class="math inline">\(\eta(s)\)</span> will then be used in the observation-likelihood, which is here chosen as gaussian. We use the <code>|</code> notation to indicate conditioning of the property at the left side of <code>|</code> o the parameters given to the right side of <code>|</code>. This leads to the following hierarchical formulation for the observations,</p>
+\]</span> The spatial field <span class="math inline">\(W(s)\)</span> captures autocorrelation not explained by the covariates. The latent process <span class="math inline">\(\eta(s)\)</span> will then be used in the observation-likelihood, which is here chosen as gamma distribution as soil carbon is known to present a heavy-tailed distribution.</p>
+<p>We use the <code>|</code> notation to indicate conditioning of the property at the left side of <code>|</code> o the parameters given to the right side of <code>|</code>. This leads to the following hierarchical formulation for the observations,</p>
 <p><span class="math display">\[
 z(s) | (\eta(s),\theta) \sim \Gamma(\exp(\eta(s_i)), \tau),
 \]</span> where the Gamma distribution is parametrized in a way such that <span class="math inline">\(\exp(\eta(s_i))\)</span> is its mean and <span class="math inline">\(\tau\)</span> is a dispersion parameter related to the variance around the mean. <span class="math inline">\(\theta = (\theta_\eta, \tau)\)</span> with <span class="math inline">\(\theta_\eta\)</span> the hyperparameters controlling the linear predictors <span class="math inline">\(\eta\)</span>.</p>
 <p>Moreover different observations <span class="math inline">\(z(s)\)</span> are conditionally independent given the latent process <span class="math inline">\(\eta(s)\)</span> and the hyperparameters in <span class="math inline">\(\theta\)</span> controlling it. This means that we include a <code>nugget effect</code> or <code>measurement error</code> with variance <span class="math inline">\(\sigma^2\)</span> in the model.</p>
-<p>In this paper, <span class="math inline">\(z\)</span> will correspond to the organic matter, <code>om</code>.</p>
 </section>
 <section id="construction-of-the-mesh-for-the-spde-model" class="level2">
 <h2 class="anchored" data-anchor-id="construction-of-the-mesh-for-the-spde-model">Construction of the mesh for the SPDE model</h2>
@@ -317,7 +317,6 @@ z(s) | (\eta(s),\theta) \sim \Gamma(\exp(\eta(s_i)), \tau),
 </div>
 <p>Finally, we fit the hierarchical model to the data using the <code>bru</code> function of the <code>inlabru</code> package. This function requires the model components defined earlier (<code>cmp</code>), the dataset (<code>meuse</code>), the mesh (<code>mesh</code>) where the model will be evaluated, and several options to control the INLA algorithm.</p>
 <p>For handling the uncertainty stemming from the prior distributions of hyperparameters (here the standard deviation and the correlation range), we use the <code>eb</code> strategy as it is much quicker to compute but a bit less accurate. This <code>empirical Bayes</code> approach sets the hyperparameters to their <code>maximum a posteriori</code> for some of the calculations performed during the estimation algorithm, that is, it uses a mechanism similar to frequentist inference techniques for handling the hyperparameters.</p>
-<p>One need to indicate the likelihood family such as <code>gaussian</code>, <code>poisson</code> or <code>binomial</code>. By default family is <code>gaussian</code>. A list of possible alternatives can be seen by typing <code>names(inla.models()$likelihood)</code>. It is therefore possible to fit a wide range of model allowing to approach a great diversity of problems in soil science. We use here the <code>gamma</code> family to cope with heavy tail.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> inlabru<span class="sc">::</span><span class="fu">bru</span>(</span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">components =</span> cmp,</span>
@@ -346,7 +345,7 @@ Likelihoods:
     Data class: 'SpatialPointsDataFrame'
     Predictor: om ~ .
 Time used:
-    Pre = 1.21, Running = 1.12, Post = 0.061, Total = 2.39 
+    Pre = 1.27, Running = 1.13, Post = 0.0584, Total = 2.46 
 Fixed effects:
             mean    sd 0.025quant 0.5quant 0.975quant   mode kld
 Intercept  2.349 0.223      1.912    2.349      2.785  2.349   0
@@ -359,11 +358,11 @@ Random effects:
 Model hyperparameters:
                                                    mean      sd 0.025quant
 Precision parameter for the Gamma observations   14.227   2.487      9.969
-Range for field                                1760.210 831.848    781.674
+Range for field                                1760.208 831.851    781.670
 Stdev for field                                   0.555   0.175      0.318
                                                0.5quant 0.975quant    mode
 Precision parameter for the Gamma observations    14.01     19.738   13.58
-Range for field                                 1558.31   3944.185 1227.82
+Range for field                                 1558.31   3944.193 1227.82
 Stdev for field                                    0.52      0.996    0.45
 
 Deviance Information Criterion (DIC) ...............: 664.90
@@ -404,7 +403,7 @@ Posterior summaries for the linear predictor and the fitted values are computed
 <span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a><span class="fu">str</span>(samp)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code> num [1:3103, 1:5] 14.3 14.5 14.8 14 14.3 ...</code></pre>
+<pre><code> num [1:3103, 1:5] 12.8 13.8 13.4 13 12 ...</code></pre>
 </div>
 <div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>pred<span class="sc">$</span>sample <span class="ot">&lt;-</span> samp[, <span class="dv">1</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
@@ -438,7 +437,7 @@ Posterior summaries for the linear predictor and the fitted values are computed
 </section>
 <section id="the-spatial-predictions-with-uncertainty" class="level2">
 <h2 class="anchored" data-anchor-id="the-spatial-predictions-with-uncertainty">The spatial predictions with uncertainty</h2>
-<p>We can plot the median, lower 95% and upper 95% density surfaces as follows (assuming that the predicted intensity is in object <code>pred</code>).</p>
+<p>We can plot the median, lower 95% and upper 95% density surfaces as follows as follows (assuming that the predicted soil property is in object <code>pred</code>).</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="co"># correction of negative predictions</span></span>
 <span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>pred<span class="sc">$</span>q0<span class="fl">.025</span>[pred<span class="sc">$</span>q0<span class="fl">.025</span><span class="sc">&lt;</span><span class="dv">0</span>] <span class="ot">=</span> <span class="dv">0</span> </span>
@@ -501,6 +500,7 @@ Posterior summaries for the linear predictor and the fitted values are computed
 <h1>Final remarks</h1>
 <p>The goal of <a href="http://inlabru.org/">inlabru</a> is to facilitate spatial modeling using integrated nested Laplace approximation via the <a href="https://www.r-inla.org/">R-INLA package</a>. The recent developments allow now to construct in a convenient way Bayesian spatial model (INLA-SPDE) of soil properties and their uncertainty. Model components are specified with general inputs and mapping methods to the latent variables, and the predictors are specified via general R expressions.</p>
 <p>In their study, Poggio et al. <span class="citation" data-cites="Poggio2016">(<a href="#ref-Poggio2016" role="doc-biblioref">2016</a>)</span> and Huang et al. <span class="citation" data-cites="Huang2017">(<a href="#ref-Huang2017" role="doc-biblioref">2017</a>)</span> reported that INLA-SPDE became quite slow when estimating the posterior marginal distributions of the environmental variables associated with large datasets. When the number of observations is huge, it is important to mention that one can improve the performance of the high-dimensional matrix computations conducted in INLA by using the PARDISO solver library. It is already full included in the standard INLA installation but has to be activated through a licence key. To activate it (free for non commercial uses), go to https://www.pardiso-project.org/r-inla/#license to obtain the license, which will take you at most several minutes. Also, you can type inla.pardiso() at the R command line for viewing the (very simple) instructions on how to enable the PARDISO sparse library. Moreover, new developments are underway for especially data-rich model to achieve even faster inference, improved numerical stability and scalability using variational approximation <span class="citation" data-cites="VANNIEKERK2023107692">(<a href="#ref-VANNIEKERK2023107692" role="doc-biblioref">Van Niekerk et al. 2023</a>)</span>.</p>
+<p>One need to indicate the likelihood family such as <code>gaussian</code>, <code>poisson</code> or <code>binomial</code>. By default family is <code>gaussian</code>. A list of possible alternatives can be seen by typing <code>names(inla.models()$likelihood)</code>. It is therefore possible to fit a wide range of model allowing to approach a great diversity of problems in soil science. We use here the <code>gamma</code> family to cope with heavy tail.</p>
 <p>Heuvelink and Webster <span class="citation" data-cites="HEUVELINK2022100639">(<a href="#ref-HEUVELINK2022100639" role="doc-biblioref">2022</a>)</span> listed a set of challenges for pedometricians and spatial statisticians to strengthen the role of spatial statistics. Without being able to solve all of them, it seems to us that <code>INLA</code> by providing a fully Bayesian modelling in a rapid and convinent way can provide some answers to some of them, e.g., the better uncertainty quantification, the change of support, incorporating attribute and positional measurement uncertainty.</p>
 </section>
 <section id="code-availability" class="level1">
