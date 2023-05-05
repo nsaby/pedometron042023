@@ -259,6 +259,7 @@ multiplot(p1, p2)
 As the credibility interval does not contains 0, we can conclude to a significant effect of the fixed effect.
 
 We can also plot the posterior distribution of the parameters of the gaussiant field: range and variance
+
 ```{r}
 spde.range.W0 <- spde.posterior(fit, "field", what = "range")
 spde.logvar.W0 <- spde.posterior(fit, "field", what = "variance")
@@ -271,7 +272,7 @@ multiplot(range.plot.W0, var.plot.W0)
 
 ## The spatial predictions with uncertainty
 
-We can plot the median, lower 95% and upper 95% density surfaces as follows (assuming that the predicted intensity is in object `pred`).
+We can plot the median, lower 95% and upper 95% of the predicted soil property as follows (assuming that the predicted soil property is in object `pred`).
 
 ```{r}
 # correction of negative predictions
