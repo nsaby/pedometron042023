@@ -272,7 +272,7 @@ multiplot(range.plot.W0, var.plot.W0)
 
 ## The spatial predictions with uncertainty
 
-We can plot the median, lower 95% and upper 95% of the predicted soil property as follows (assuming that the predicted soil property is in object `pred`).
+We can plot the median, lower 95% and upper 95% density surfaces as follows as follows (assuming that the predicted soil property is in object `pred`).
 
 ```{r}
 # correction of negative predictions
