@@ -110,6 +110,7 @@ We construct a hierarchical model for the soil property $z(s)$ at spatial locati
 $$
 \eta(s) \sim {\text{Intercept}} + \underbrace{ \sum_{i\in \text{scorpan}}\beta_i z_i(s)}_{\text{Covariates} } +\underbrace{W(s)}_{\text{Spatial Gaussian field}}
 $$
+
 The spatial field $W(s)$ captures autocorrelation not explained by the covariates. The latent process $\eta(s)$ will then be used in the observation likelihood, which is here chosen, as a Gamma distribution since soil carbon is a non-negative variable and is known to present a relatively heavy-tailed distribution.
 
 We use the `|` notation to indicate conditioning of the property at the left side of `|` on the parameters given at the right side of `|`. This leads to the following hierarchical formulation for the observations,
@@ -173,7 +174,6 @@ matern <-
 
 We then specify the model components in the `cmp` object using the convenient `inlabru` approach.  In this example implementation, we include the following latent effects: two fixed effects (an intercept, and a linear relationship with the covariate corresponding to the distance to the river), and the Gaussian random field as a random effect.
 
-
 ```{r}
 cmp <- om ~ 
   field(coordinates, model = matern) + 
@@ -185,7 +185,6 @@ cmp <- om ~
 Finally, we fit the hierarchical model to the data using the `bru` function of the `inlabru` package. This function requires the model components defined earlier (`cmp`), the dataset (`meuse`), the mesh (`mesh`) where the model will be evaluated, and several options to control the INLA algorithm.
 
 For handling the uncertainty stemming from the prior distributions of the three hyperparameters in $\theta$, we use the `eb` strategy as it is much quicker to compute but a bit less accurate. This `empirical Bayes` approach sets the hyperparameters to their `maximum a posteriori` for some of the calculations performed during the estimation algorithm, that is, it uses a mechanism similar to frequentist inference techniques for handling the hyperparameters.
-
 
 
 ```{r}
@@ -210,7 +209,7 @@ summary(fit)
 
 # Spatial predictions
 
-Next, we use the fit to predict the field on a regular lattice, and we therefore generate a set of results using 100 realizations from the posterior distribution of the model. The approach of using posterior simulation for prediction allows us to appropriately represent the uncertainties in the predictions, and we can choose very flexibly for which parameters and properties we would like to provide predictions. In the predictor formula, we use the `exp` function to take into account the log-link between the mean of the Gamma distribution of the `om` variable and our linear predictor. This approach provides predictions of the mean surface of the Gamma distribution. 
+Next, we use the fit to predict the field on a regular lattice, and we therefore generate a set of results using 100 realizations from the posterior distribution of the model. The approach of using posterior simulation for prediction allows us to appropriately represent the uncertainties in the predictions, and we can choose very flexibly for which parameters and properties we would like to provide predictions. In the predictor formula, we use the `exp` function to take into account the log-link between the mean of the Gamma distribution of the `om` variable and our linear predictor. This approach provides predictions of the mean surface of the Gamma distribution.
 
 ```{r}
 pred <- predict(
@@ -269,7 +268,6 @@ multiplot(range.plot.W0, var.plot.W0)
 
 We can plot the spatial surfaces corresponding to the pointwise median and to the lower and upper bounds of a 95% credible interval as follows (assuming that the predicted intensity is in the object `pred`).
 
-
 ```{r}
 # correction of negative predictions
 pred$q0.025[pred$q0.025<0] = 0 
@@ -324,7 +322,6 @@ tm_shape(pred) +
 
 # Final remarks
 
-
 Heuvelink and Webster [-@HEUVELINK2022100639]  listed a set of challenges for pedometricians and spatial statisticians  to  strengthen the role of spatial statistics and to fully exploit its modern cutting-edge tools. While not being able to solve all of them, we are convinced that fully Bayesian modelling using `INLA`  with  its numerically highly efficient implementation can provide satisfactory answers to some of these challenges, in particular regarding improved uncertainty quantification,  the change of the support, and the incorporation of attribute and positional measurement uncertainty. 
 
 The goal of [inlabru](http://inlabru.org/) is to further facilitate spatial modeling using integrated nested Laplace approximation via the [R-INLA package](https://www.r-inla.org/). The recent developments made available through `inlabru` allow for an even more convenient construction of Bayesian spatial models  of soil properties along with precise uncertainty assessments through the INLA-SPDE approach. Various types of model components can be specified based on various predictors used as inputs, and internally these components are represented through a set of latent Gaussian variables. The predictors are specified via general R expressions. Most of the technical details of the implementation are hidden and handled internally by `inlabru`.
@@ -332,7 +329,6 @@ The goal of [inlabru](http://inlabru.org/) is to further facilitate spatial mode
 The user can choose a likelihood family, such as `gaussian`, `poisson` or `binomial`, from a long list of possible choices. The default family is `gaussian`. A list of possible alternatives can be seen by typing `names(inla.models()$likelihood)`. Therefore, it is possible to fit a wide range of models allowing to tackle a great diversity of data types and problems in soil science. Here we used the `gamma` family  to impose nonnegativity and cope with heavy tails.
 
 In their studies, Poggio et al. [-@Poggio2016] and Huang et al. [-@Huang2017] reported  that INLA-SPDE became quite slow when estimating the posterior marginal distributions of the environmental variables when datasets were large. When the number of observations is huge, it is important hat one can improve the performance of the high-dimensional matrix computations conducted in INLA by using the PARDISO solver library. It is already fully included in the standard INLA installation but has to be activated through a licence key. To activate it (note that it is free for non commercial uses), go to https://www.pardiso-project.org/r-inla/#license to obtain the license, which will take you at most several minutes. Also, you can type `inla.pardiso()` at the R command line for viewing the (very simple) instructions on how to enable the PARDISO sparse library. Moreover, additional methodological developments have become available in the latest INLA versions for handling especially data-rich models to achieve even faster inference, improved numerical stability and scalability [@VANNIEKERK2023107692].
-
 
 
 # Code availability
