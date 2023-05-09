@@ -46,7 +46,7 @@ Pedometricians are nowadays big fans and heavy users of Machine Learning (ML) ap
 
 In this paper, we propose to solve these issues by using the fully Bayesian estimation framework based on the integrated nested Laplace approximation (INLA,[@Rue2009]), combined with the so-called stochastic partial differential equation approach [SPDE, @Lindgren2011] that provides numerically convenient representations of Gaussian processes over continuous space. Over the last decade, the INLA method has become the most popular tool in spatial statistics for estimating a wide variety of Generalized Additive Mixed Models (i.e., Generalized Additive Models with random effects) in a Bayesian setting. It is a relatively easy-to-use alternative to traditional Markov chain Monte Carlo methods since it provides off-the-shelf implementation of fast and accurate deterministic approximations of posterior inferences for a large class of models. INLA with SPDE is a powerful combination to handle very large spatial datasets. Models are formulated as Bayesian hierarchical models where covariate effects and Gaussian processes can be additively included in a latent process (that is not directly observed), whereas the probability distribution of observations can be of different types (continuous such as Gaussian, skew-Gaussian, Gamma, extreme-value, or discrete such as Poisson, binomial, negative binomial), and the latent Gaussian process is embedded into a key parameter of the probability distribution, such as the mean.
 
-INLA-SPDE was already introduced by [@Poggio2016] or [@Huang2017] to the pedometrics community. However, wider use of this approach by the community was probably hindered by the complexity of the `INLA` R package. Recently, the `inlabru` R package [@yuan2017point],  an add-on package to `INLA` originally developed with a strong focus on point process models for discrete data in ecology, has integrated a range of functions to help implement INLA-SPDE models in a more convenient way through a more ergonomic interface. We propose here to illustrate how this package works by using a simple and classical regression kriging approach as an example.
+INLA-SPDE was already introduced by Poggio et al. [-@Poggio2016] or Huang et al. [-@Huang2017] to the pedometrics community. However, wider use of this approach by the community was probably hindered by the complexity of the `INLA` R package. Recently, the `inlabru` R package [@yuan2017point],  an add-on package to `INLA` originally developed with a strong focus on point process models for discrete data in ecology, has integrated a range of functions to help implement INLA-SPDE models in a more convenient way through a more ergonomic interface. We propose here to illustrate how this package works by using a simple and classical regression kriging approach as an example.
 
 # Set-up
 
@@ -108,7 +108,7 @@ We construct a hierarchical model for the soil property $z(s)$ at spatial locati
 
 
 $$
-\eta(s) \sim {\text{Intercept}} + \underbrace{ \sum_{i\in \text{scorpan}}\beta_i z_i(s)}_{\text{Covariates} } +\underbrace{W(s)}_{\text{Spatial Gaussian field}}
+\eta(s) \sim {\text{Intercept}} + \underbrace{ \sum_{i}\beta_i z_i(s)}_{\text{Covariates} } +\underbrace{W(s)}_{\text{Spatial Gaussian field}}
 $$
 
 The spatial field $W(s)$ captures autocorrelation not explained by the covariates. The latent process $\eta(s)$ will then be used in the observation likelihood, which is here chosen, as a Gamma distribution since soil carbon is a non-negative variable and is known to present a relatively heavy-tailed distribution.
@@ -269,9 +269,6 @@ multiplot(range.plot.W0, var.plot.W0)
 We can plot the spatial surfaces corresponding to the pointwise median and to the lower and upper bounds of a 95% credible interval as follows (assuming that the predicted intensity is in the object `pred`).
 
 ```{r}
-# correction of negative predictions
-pred$q0.025[pred$q0.025<0] = 0 
-
 tm_shape(pred) +
   tm_raster(
     c("q0.025","median","q0.975")
